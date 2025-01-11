@@ -1,0 +1,55 @@
+
+.686
+.model flat
+public _rozmiar
+extern _malloc : PROC
+extern _free : PROC
+extern _FindFirstFileW@8 : PROC
+extern _FindClose@4 : PROC
+
+.code 
+_rozmiar PROC 
+    push ebp
+    mov  ebp, esp
+    push esi
+    push edi
+    push ebx
+
+    ; Pobranie parametrów funkcji ze stosu
+    mov  esi, [ebp + 8]        ; esi = wchar_t* nazwa pliku
+    mov  edi, [ebp + 12]       ; edi = FILETIME* czas (niewykorzystane w tej wersji)
+
+    ; Alokacja pamięci dla WIN32_FIND_DATAW (320 bajtów)
+    push 592                  ; Rozmiar struktury
+    call _malloc              ; Zaalokowana pamięć, wskaźnik w eax
+    add esp,4
+    push eax
+    
+
+    ; Wywołanie FindFirstFileW
+    push eax                  ; Drugi argument: wskaźnik do WIN32_FIND_DATAW
+    push esi                  ; Pierwszy argument: wskaźnik do szerokoznakowej nazwy pliku
+    call _FindFirstFileW@8
+    pop ebx
+    xor edx,edx
+    ; Pobranie rozmiaru pliku z WIN32_FIND_DATAW
+    mov  eax, [ebx + 32]      ; nFileSizeLow (offset 28)
+    mov  edx, [ebx + 28]      ; nFileSizeHigh (offset 32)
+    mov ecx, [ebx + 4]         ; Dolne 32 bity ftCreationTime
+    mov [edi], ecx             ; Zapisz dolne 32 bity w FILETIME
+    mov ecx, [ebx + 8]         ; Górne 32 bity ftCreationTime
+    mov [edi + 4], ecx         ; Zapisz górne 32 bity w FILETIME
+    
+    pop  ebx
+    pop  edi
+    pop  esi
+    pop  ebp
+    ret
+
+
+_rozmiar ENDP
+END
+
+
+
+ 
